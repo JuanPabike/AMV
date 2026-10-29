@@ -9,8 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="Terminal AMV">
 <meta name="theme-color" content="#050d18">
 <link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Terminal AMV · Simulador Operador v5</title>
+<title>Terminal AMV · Simulador Operador v5.2</title>
 <style>
 :root{--bg:#050d18;--glass:#0e1f35cc;--line:#1f3c58;--ink:#eef7ff;--mut:#9fb6cb;--cy:#24c7cf;--gr:#25b879;--rd:#e0566f;--ye:#e8b53a}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -92,6 +93,8 @@ input:focus{border-color:var(--cy);box-shadow:0 0 0 3px #24c7cf33}
       <div id="p2wrap" class="hide">
         <label for="p2">Repite la contraseña</label>
         <input type="password" id="p2" autocomplete="new-password">
+        <label for="inv">Código de acceso (solo para crear operadores)</label>
+        <input type="password" id="inv" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Te lo da el administrador">
       </div>
       <label class="chk"><input type="checkbox" id="keep" checked> Mantener la sesión abierta en este dispositivo</label>
       <button class="btn go" id="goBtn" type="submit">▶ Abrir sesión de mercado</button>
@@ -130,6 +133,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 0 3px #24c7cf33}
 <script>
 (()=>{
 const SIM="simulador.html";
+const GATE="d44b926ac657290169a1d65d2d641417e4328d58afdf962e7a33f679686c92d3"; // SHA-256 del código de acceso para crear operadores
 const $=id=>document.getElementById(id);
 const LS=window.localStorage;
 const K={users:"amvv5:users",active:"amvv5:active",keep:"amvv5:keep",vault:id=>"amvv5:vault:"+id};
@@ -194,6 +198,8 @@ $("fLogin").addEventListener("submit",async e=>{
   if(mode==="new"){
     if(U[id]){say("Ese usuario ya existe. Toca su nombre arriba para entrar.");return;}
     if(pw!==$("p2").value){say("Las contraseñas no coinciden.");return;}
+    const gate=await hash("amv-gate",$("inv").value.trim().toUpperCase());
+    if(gate!==GATE){say("Código de acceso incorrecto. Solo se pueden crear operadores con invitación.");$("inv").select();return;}
     const salt=Math.random().toString(36).slice(2)+Date.now().toString(36);
     const first=!Object.keys(U).length;
     U[id]={name,salt,hash:await hash(salt,pw),color:COLORS[Object.keys(U).length%COLORS.length],created:new Date().toISOString()};
@@ -206,7 +212,7 @@ $("fLogin").addEventListener("submit",async e=>{
     if(!u){say("No encuentro ese usuario. Revisa o crea uno nuevo.");return;}
     if(await hash(u.salt,pw)!==u.hash){say("Contraseña incorrecta.");$("p").select();return;}
   }
-  $("p").value="";$("p2").value="";
+  $("p").value="";$("p2").value="";$("inv").value="";
   enter(id,$("keep").checked);
 });
 
@@ -231,6 +237,43 @@ function logout(){
 }
 $("outBtn").addEventListener("click",logout);
 
+/* ---------- parche v5.1: selector de cantidad adaptado al banco de cada módulo ---------- */
+function patchCounts(w,d){
+  if(w.__cntPatched) return; w.__cntPatched=true;
+  const E=x=>w.eval(x);
+  function bankInfo(m){
+    let pool=0,gens=0,share=0;
+    try{pool=(E("MODQ")[m]||[]).length;gens=(E("GENM")[m]||[]).length;share=E("CALC_SHARE")[m]||0;}catch(e){}
+    let k=pool;
+    if(gens&&pool){ while(k-Math.round(k*share)<pool&&k<pool*12) k++; }
+    return {pool,gens,k};
+  }
+  function errCount(){
+    try{return E("(()=>{const T=tabConf(tab),ms=new Set(mods(T.dist));return Object.values(load('errors',{})).filter(m=>ms.has(m)).length})()");}catch(e){return 0;}
+  }
+  function refresh(){
+    const sel=d.getElementById("n"),type=d.getElementById("type");
+    if(!sel||!type) return;
+    const prev=sel.value, t=type.value, opts=[[10,"10"],[20,"20"],[30,"30"],[40,"40"]];
+    if(t==="mod"){
+      const m=d.getElementById("mod").value, b=bankInfo(m);
+      if(b.k>0&&!opts.some(o=>o[0]===b.k)) opts.push([b.k,"Todas ("+b.k+(b.gens?" con cálculos":"")+")"]);
+      else if(b.k>0) opts.forEach(o=>{if(o[0]===b.k)o[1]="Todas ("+b.k+")";});
+    }else if(t==="err"){
+      const c=errCount(); if(c>0&&!opts.some(o=>o[0]===c)) opts.push([c,"Todas ("+c+")"]);
+    }else if(t==="weak"||t==="calc"){ opts.push([60,"60"]); if(t==="calc") opts.push([100,"100"]); }
+    opts.sort((a,b)=>a[0]-b[0]);
+    sel.innerHTML="";
+    opts.forEach(([v,l])=>{const o=d.createElement("option");o.value=String(v);o.textContent=l;sel.append(o);});
+    sel.value=opts.some(o=>String(o[0])===prev)?prev:"20";
+  }
+  const oh=w.home, ou=w.updateTypeUI;
+  w.updateTypeUI=function(){ ou.apply(this,arguments); refresh(); };
+  w.home=function(){ oh.apply(this,arguments); refresh(); };
+  const mod=d.getElementById("mod"); if(mod) mod.addEventListener("change",refresh);
+  w.home();
+}
+
 /* ---------- integración con el simulador (mismo origen) ---------- */
 $("frame").addEventListener("load",()=>{
   const f=$("frame");let w,d;
@@ -245,6 +288,7 @@ $("frame").addEventListener("load",()=>{
   .fcbtns button{min-height:56px}
   header.c h1{font-size:24px}`;
   d.head.append(st);
+  try{patchCounts(w,d);}catch(e){console.warn("patchCounts",e);}
   // Sin descargas automáticas: el progreso se guarda en el usuario
   try{w.afterSessionSave=function(){};}catch(e){}
   // Ajusta el texto de ayuda de la pantalla de inicio
@@ -265,7 +309,7 @@ $("bkBtn").addEventListener("click",()=>$("sheet").classList.remove("hide"));
 $("closeSheet").addEventListener("click",()=>$("sheet").classList.add("hide"));
 $("expBtn").addEventListener("click",async()=>{
   syncOut(); const id=LS.getItem(K.active); if(!id) return;
-  const data=snapshot(); data["amvsim4:meta"]=JSON.stringify({saved:new Date().toISOString(),v:"5.0",user:id});
+  const data=snapshot(); data["amvsim4:meta"]=JSON.stringify({saved:new Date().toISOString(),v:"5.1",user:id});
   const name=`progreso_amv_${id}_${stamp(new Date())}.json`, json=JSON.stringify(data);
   try{const file=new File([json],name,{type:"application/json"});
     if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return;}}catch(e){if(e&&e.name==="AbortError")return;}
