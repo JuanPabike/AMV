@@ -1,0 +1,20 @@
+TERMINAL AMV v5 - Como dejarlo funcionando (una sola vez, desde el PC)
+
+1. En esta carpeta pon tu simulador y cambiale el nombre EXACTO a:  simulador.html
+   (es tu Simulador_AMV_Operador_v4_2_2026.html, sin modificarlo)
+   La carpeta debe quedar con: index.html, simulador.html, manifest.webmanifest, icon-180.png, icon-512.png
+
+2. Crea una cuenta gratis en github.com.
+3. Boton "+" > New repository > nombre: amv  > Public > Create repository.
+4. Toca "uploading an existing file", arrastra los 5 archivos > Commit changes.
+5. Settings > Pages > Source: "Deploy from a branch" > Branch: main / (root) > Save.
+6. En 1-2 minutos tu pagina queda en:  https://TU-USUARIO.github.io/amv/
+
+EN EL IPAD
+7. Abre ese enlace en Safari > boton Compartir > "Agregar a pantalla de inicio".
+8. Usa SIEMPRE ese icono "Terminal AMV" (tiene su propio almacenamiento y no se borra a los 7 dias como en Safari).
+9. Crea tu operador. Si tienes un progreso_simulador_amv_....json anterior: toca tu usuario > "Importar progreso".
+
+Respaldo: dentro del simulador, boton "Respaldo" > Descargar/compartir (guardalo en Archivos o OneDrive de vez en cuando).
+Nota: la contrasena separa el progreso de cada persona en el mismo dispositivo; no es seguridad bancaria.
+Para actualizar el simulador en el futuro: sube el nuevo simulador.html al repositorio (mismo nombre). El progreso no se pierde.

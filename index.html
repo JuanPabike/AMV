@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Terminal AMV">
+<meta name="theme-color" content="#050d18">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Terminal AMV · Simulador Operador v5</title>
+<style>
+:root{--bg:#050d18;--glass:#0e1f35cc;--line:#1f3c58;--ink:#eef7ff;--mut:#9fb6cb;--cy:#24c7cf;--gr:#25b879;--rd:#e0566f;--ye:#e8b53a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;overscroll-behavior:none}
+button,input{font:inherit}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.hide{display:none!important}
+/* ---------- ticker ---------- */
+.ticker{position:fixed;left:0;right:0;top:0;z-index:2;padding-top:env(safe-area-inset-top);background:#03080fe6;border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap}
+.tk{display:inline-block;padding:9px 0;animation:roll 70s linear infinite;font:600 14px ui-monospace,Menlo,monospace}
+.tk span{margin:0 18px}.up{color:var(--gr)}.dn{color:var(--rd)}
+@keyframes roll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+/* ---------- login ---------- */
+#login{position:relative;z-index:1;min-height:100%;display:flex;align-items:center;justify-content:center;padding:calc(64px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom))}
+.card{width:100%;max-width:470px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid #2a5172;border-radius:22px;padding:26px;box-shadow:0 20px 60px #000a}
+.status{display:flex;align-items:center;gap:8px;font:600 13px ui-monospace,Menlo,monospace;color:var(--cy);letter-spacing:.06em;text-transform:uppercase}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--gr);box-shadow:0 0 10px var(--gr);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+h1{margin:10px 0 2px;font-size:30px;letter-spacing:-.02em}
+h1 b{background:linear-gradient(90deg,var(--cy),var(--gr));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mut);margin:0 0 18px;font-size:15px}
+.clock{font:700 15px ui-monospace,Menlo,monospace;color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:99px;border:1px solid var(--line);background:#0a1a2c;color:var(--ink);min-height:44px;cursor:pointer}
+.chip.on{border-color:var(--cy);box-shadow:0 0 0 2px #24c7cf55}
+.av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;color:#03151d}
+label{display:block;font-size:13px;color:var(--mut);margin:12px 0 6px}
+input[type=text],input[type=password]{width:100%;padding:14px 15px;font-size:17px;border-radius:13px;border:1px solid #2d4d6b;background:#06121f;color:var(--ink);outline:none}
+input:focus{border-color:var(--cy);box-shadow:0 0 0 3px #24c7cf33}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.chk{display:flex;gap:9px;align-items:center;color:var(--ink);font-size:15px;margin:14px 0 4px;cursor:pointer}
+.chk input{width:22px;height:22px;accent-color:var(--cy)}
+.btn{min-height:50px;padding:12px 18px;border-radius:14px;border:1px solid #33526f;background:#132c45;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--ye);outline-offset:2px}
+.go{width:100%;margin-top:16px;border:0;color:#03151d;background:linear-gradient(135deg,var(--cy),var(--gr));font-size:17px;letter-spacing:.02em}
+.go:active{transform:scale(.98)}
+.link{background:none;border:0;color:var(--cy);font-weight:600;padding:10px 0;cursor:pointer;font-size:15px}
+.msg{min-height:22px;margin-top:10px;font-size:14px}.err{color:#ff8fa3}.ok{color:#6fe3a9}
+.tip{margin-top:18px;padding:12px 14px;border-radius:13px;background:#071628;border-left:4px solid var(--ye);font-size:14px;line-height:1.45;color:#dbe8f4}
+.tip b{color:var(--ye)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.st{background:#06121f;border:1px solid var(--line);border-radius:12px;padding:9px;text-align:center}
+.st b{display:block;font:700 18px ui-monospace,Menlo,monospace}.st small{color:var(--mut);font-size:11px}
+.warnbar{margin-top:12px;font-size:13px;color:var(--ye)}
+/* ---------- app ---------- */
+#app{position:fixed;inset:0;z-index:3;display:flex;flex-direction:column;background:#071321}
+.top{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left));background:#03080f;border-bottom:1px solid var(--line)}
+.top .who{flex:1;min-width:0;display:flex;align-items:center;gap:9px;font-weight:700}
+.top .who small{display:block;font:600 12px ui-monospace,Menlo,monospace;color:var(--gr)}
+.top .btn{min-height:44px;padding:8px 13px;font-size:15px}
+#frame{flex:1;width:100%;border:0;background:#071321}
+.sheet{position:fixed;inset:0;z-index:9;background:#000b;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.sheet .card{max-width:520px;margin-bottom:env(safe-area-inset-bottom)}
+.sheet .btn{width:100%;margin-top:10px}
+@media (prefers-reduced-motion:reduce){.tk,.dot{animation:none}}
+@media (max-width:420px){h1{font-size:25px}.card{padding:20px}}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="ticker" aria-hidden="true"><div class="tk" id="tk"></div></div>
+
+<main id="login">
+  <section class="card" aria-labelledby="ttl">
+    <div class="row" style="justify-content:space-between">
+      <div class="status"><span class="dot"></span><span id="phase">Mercado abierto</span></div>
+      <div class="clock" id="clock">--:--</div>
+    </div>
+    <h1 id="ttl">Terminal <b>AMV</b></h1>
+    <p class="sub" id="greet">Acceso de operador</p>
+
+    <div id="chips" class="chips" aria-label="Operadores guardados"></div>
+
+    <form id="fLogin" autocomplete="on">
+      <label for="u">Usuario</label>
+      <input type="text" id="u" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Ej.: juanpa" autocomplete="username" required>
+      <label for="p">Contraseña</label>
+      <input type="password" id="p" placeholder="Mínimo 4 caracteres" autocomplete="current-password" required>
+      <div id="p2wrap" class="hide">
+        <label for="p2">Repite la contraseña</label>
+        <input type="password" id="p2" autocomplete="new-password">
+      </div>
+      <label class="chk"><input type="checkbox" id="keep" checked> Mantener la sesión abierta en este dispositivo</label>
+      <button class="btn go" id="goBtn" type="submit">▶ Abrir sesión de mercado</button>
+      <div class="msg" id="msg" aria-live="polite"></div>
+    </form>
+    <div class="row" style="justify-content:space-between">
+      <button class="link" type="button" id="modeBtn">＋ Crear operador nuevo</button>
+      <button class="link" type="button" id="impBtn">📂 Importar progreso</button>
+    </div>
+    <div id="stats" class="stats hide"></div>
+    <div class="tip" id="tip"></div>
+    <div class="warnbar" id="envWarn"></div>
+  </section>
+</main>
+
+<div id="app" class="hide">
+  <div class="top">
+    <div class="who"><span class="av" id="appAv">J</span><div style="min-width:0"><span id="appName">—</span><small id="saveInfo">● Guardado automático</small></div></div>
+    <button class="btn" type="button" id="bkBtn">💾 Respaldo</button>
+    <button class="btn" type="button" id="outBtn">Salir</button>
+  </div>
+  <iframe id="frame" title="Simulador AMV"></iframe>
+</div>
+
+<div id="sheet" class="sheet hide" role="dialog" aria-modal="true">
+  <div class="card">
+    <h2 style="margin:0 0 6px">Respaldo del progreso</h2>
+    <p class="sub" style="margin-bottom:6px">Tu progreso ya se guarda solo. El respaldo sirve si borras los datos del navegador o cambias de dispositivo.</p>
+    <button class="btn go" type="button" id="expBtn">💾 Descargar / compartir respaldo</button>
+    <button class="btn" type="button" id="imp2Btn">📂 Cargar un respaldo en este usuario</button>
+    <button class="btn" type="button" id="closeSheet">Cerrar</button>
+  </div>
+</div>
+<input type="file" id="file" accept="application/json,.json,text/plain" class="hide">
+
+<script>
+(()=>{
+const SIM="simulador.html";
+const $=id=>document.getElementById(id);
+const LS=window.localStorage;
+const K={users:"amvv5:users",active:"amvv5:active",keep:"amvv5:keep",vault:id=>"amvv5:vault:"+id};
+const isLive=k=>k.startsWith("amvsim4:")||k==="amvsim4_local_prefs";
+const jget=(k,d)=>{try{const v=JSON.parse(LS.getItem(k));return v==null?d:v;}catch(e){return d;}};
+const jset=(k,v)=>LS.setItem(k,JSON.stringify(v));
+let storageOK=true; try{LS.setItem("amvv5:t","1");LS.removeItem("amvv5:t");}catch(e){storageOK=false;}
+
+/* ---------- capa de usuarios ---------- */
+const users=()=>jget(K.users,{});
+const slug=s=>s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9._-]/g,"");
+const COLORS=["#24c7cf","#25b879","#e8b53a","#a98bff","#ff8f6b","#5aa9ff"];
+async function hash(salt,pw){
+  const txt=salt+"|"+pw;
+  if(window.crypto&&crypto.subtle){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(txt));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");}
+  let h=2166136261; for(let r=0;r<2000;r++) for(let i=0;i<txt.length;i++){h^=txt.charCodeAt(i)+r;h=Math.imul(h,16777619);} return "f"+(h>>>0).toString(16);
+}
+function liveKeys(){const a=[];for(let i=0;i<LS.length;i++){const k=LS.key(i);if(k&&isLive(k))a.push(k);}return a;}
+function snapshot(){const o={};for(const k of liveKeys())o[k]=LS.getItem(k);return o;}
+function clearLive(){for(const k of liveKeys())LS.removeItem(k);}
+function writeLive(o){for(const k in o)if(isLive(k))LS.setItem(k,o[k]);
+  const p=jget("amvsim4_local_prefs",{});p.autoDl=false;jset("amvsim4_local_prefs",p);}
+let lastSave=null;
+function syncOut(){const a=LS.getItem(K.active);if(!a)return;try{jset(K.vault(a),snapshot());lastSave=new Date();paintSave();}catch(e){$("saveInfo").textContent="⚠ Almacenamiento lleno: descarga un respaldo";}}
+function summary(id){const v=jget(K.vault(id),{});let ses=0,ok=0,n=0;
+  for(const k in v){if(k.startsWith("amvsim4:hist:")){try{for(const x of JSON.parse(v[k])){ses++;ok+=x.ok;n+=x.n;}}catch(e){}}}
+  let errs=0;try{errs=Object.keys(JSON.parse(v["amvsim4:errors"]||"{}")).length;}catch(e){}
+  return {ses,pct:n?Math.round(100*ok/n):null,errs};}
+
+/* ---------- login UI ---------- */
+let mode="login", picked=null;
+function renderChips(){
+  const U=users(),box=$("chips");box.innerHTML="";
+  const ids=Object.keys(U);
+  if(!ids.length){mode="new";applyMode();return;}
+  ids.forEach(id=>{const u=U[id];const b=document.createElement("button");b.type="button";b.className="chip"+(picked===id?" on":"");
+    b.innerHTML=`<span class="av" style="background:${u.color}">${u.name[0].toUpperCase()}</span>`;
+    b.append(document.createTextNode(u.name));
+    b.addEventListener("click",()=>{picked=id;$("u").value=u.name;mode="login";applyMode();renderChips();showStats(id);$("p").focus();});
+    box.append(b);});
+}
+function showStats(id){const s=summary(id),el=$("stats");el.classList.remove("hide");
+  el.innerHTML=`<div class="st"><b>${s.ses}</b><small>${s.ses===1?"sesión":"sesiones"}</small></div><div class="st"><b class="${s.pct==null?"":s.pct>=70?"up":"dn"}">${s.pct==null?"—":s.pct+" %"}</b><small>acierto histórico</small></div><div class="st"><b>${s.errs}</b><small>errores pendientes</small></div>`;}
+function applyMode(){
+  const nw=mode==="new";
+  $("p2wrap").classList.toggle("hide",!nw);
+  $("goBtn").textContent=nw?"＋ Crear operador y entrar":"▶ Abrir sesión de mercado";
+  $("modeBtn").textContent=nw?(Object.keys(users()).length?"← Ya tengo usuario":""):"＋ Crear operador nuevo";
+  $("p").autocomplete=nw?"new-password":"current-password";
+  $("msg").textContent="";
+}
+const say=(t,ok)=>{const m=$("msg");m.className="msg "+(ok?"ok":"err");m.textContent=t;};
+
+$("modeBtn").addEventListener("click",()=>{mode=mode==="new"?"login":"new";picked=null;$("stats").classList.add("hide");applyMode();renderChips();$("u").focus();});
+$("fLogin").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!storageOK){say("Este navegador está bloqueando el almacenamiento (¿navegación privada?). Ábrelo en modo normal.");return;}
+  const name=$("u").value.trim(),id=slug(name),pw=$("p").value;
+  if(!id){say("Escribe un usuario (letras o números).");return;}
+  if(pw.length<4){say("La contraseña debe tener mínimo 4 caracteres.");return;}
+  const U=users();
+  if(mode==="new"){
+    if(U[id]){say("Ese usuario ya existe. Toca su nombre arriba para entrar.");return;}
+    if(pw!==$("p2").value){say("Las contraseñas no coinciden.");return;}
+    const salt=Math.random().toString(36).slice(2)+Date.now().toString(36);
+    const first=!Object.keys(U).length;
+    U[id]={name,salt,hash:await hash(salt,pw),color:COLORS[Object.keys(U).length%COLORS.length],created:new Date().toISOString()};
+    jset(K.users,U);
+    // El primer operador hereda el progreso que ya existiera en este navegador
+    jset(K.vault(id),first&&!LS.getItem(K.active)?snapshot():{});
+    say("Operador creado. Abriendo sesión…",true);
+  }else{
+    const u=U[id];
+    if(!u){say("No encuentro ese usuario. Revisa o crea uno nuevo.");return;}
+    if(await hash(u.salt,pw)!==u.hash){say("Contraseña incorrecta.");$("p").select();return;}
+  }
+  $("p").value="";$("p2").value="";
+  enter(id,$("keep").checked);
+});
+
+/* ---------- entrar / salir ---------- */
+function enter(id,keep){
+  const prev=LS.getItem(K.active);
+  if(prev&&prev!==id) syncOut();
+  if(prev!==id){clearLive();writeLive(jget(K.vault(id),{}));}
+  else writeLive({});
+  LS.setItem(K.active,id); LS.setItem(K.keep,keep?"1":"0");
+  const u=users()[id];
+  $("appName").textContent=u.name; $("appAv").textContent=u.name[0].toUpperCase(); $("appAv").style.background=u.color;
+  $("login").classList.add("hide"); $("app").classList.remove("hide");
+  stopBg();
+  const f=$("frame"); f.src=SIM+"?u="+encodeURIComponent(id)+"&t="+Date.now();
+  if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+}
+function logout(){
+  syncOut(); clearLive(); LS.removeItem(K.active); LS.removeItem(K.keep);
+  $("frame").src="about:blank"; $("app").classList.add("hide"); $("login").classList.remove("hide");
+  picked=null; mode="login"; applyMode(); renderChips(); $("stats").classList.add("hide"); startBg();
+}
+$("outBtn").addEventListener("click",logout);
+
+/* ---------- integración con el simulador (mismo origen) ---------- */
+$("frame").addEventListener("load",()=>{
+  const f=$("frame");let w,d;
+  try{w=f.contentWindow;d=f.contentDocument;if(!d||!d.body||f.src.startsWith("about:"))return;}catch(e){return;}
+  if(!d.getElementById("home")){d.body.innerHTML='<div style="padding:24px;font-family:system-ui;color:#fff;background:#071321"><h2>No encuentro simulador.html</h2><p>Sube tu simulador a la misma carpeta con el nombre exacto <b>simulador.html</b>.</p></div>';return;}
+  const st=d.createElement("style");
+  st.textContent=`#saveBar{display:none!important}
+  body{-webkit-text-size-adjust:100%;padding-bottom:env(safe-area-inset-bottom)}
+  button,select{min-height:46px;touch-action:manipulation}
+  .option{padding:15px 14px!important;font-size:17px!important}
+  #q{font-size:20px}.cell{min-height:40px;width:44px!important}
+  .fcbtns button{min-height:56px}
+  header.c h1{font-size:24px}`;
+  d.head.append(st);
+  // Sin descargas automáticas: el progreso se guarda en el usuario
+  try{w.afterSessionSave=function(){};}catch(e){}
+  // Ajusta el texto de ayuda de la pantalla de inicio
+  const walk=d.createTreeWalker(d.getElementById("home"),NodeFilter.SHOW_TEXT);let n;
+  while(n=walk.nextNode()){if(n.textContent.includes("Al abrir, toca")) n.textContent=n.textContent.replace(/Al abrir, toca[\s\S]*$/,"Tu progreso se guarda automáticamente en tu usuario.");}
+  syncOut();
+});
+window.addEventListener("storage",e=>{if(e.key&&isLive(e.key))syncOut();});
+setInterval(()=>{if(LS.getItem(K.active)&&!$("app").classList.contains("hide"))syncOut();},5000);
+window.addEventListener("pagehide",syncOut);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)syncOut();});
+function paintSave(){if(!lastSave)return;$("saveInfo").textContent="● Guardado "+lastSave.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}
+
+/* ---------- respaldo ---------- */
+const two=x=>String(x).padStart(2,"0");
+function stamp(d){return `${d.getFullYear()}-${two(d.getMonth()+1)}-${two(d.getDate())}_${two(d.getHours())}${two(d.getMinutes())}`;}
+$("bkBtn").addEventListener("click",()=>$("sheet").classList.remove("hide"));
+$("closeSheet").addEventListener("click",()=>$("sheet").classList.add("hide"));
+$("expBtn").addEventListener("click",async()=>{
+  syncOut(); const id=LS.getItem(K.active); if(!id) return;
+  const data=snapshot(); data["amvsim4:meta"]=JSON.stringify({saved:new Date().toISOString(),v:"5.0",user:id});
+  const name=`progreso_amv_${id}_${stamp(new Date())}.json`, json=JSON.stringify(data);
+  try{const file=new File([json],name,{type:"application/json"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return;}}catch(e){if(e&&e.name==="AbortError")return;}
+  const url=URL.createObjectURL(new Blob([json],{type:"application/json"}));
+  const a=document.createElement("a");a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+});
+let importTarget=null;
+$("impBtn").addEventListener("click",()=>{
+  const id=picked||slug($("u").value);
+  if(!id||!users()[id]){say("Primero toca tu usuario (o créalo) y luego importa el progreso.");return;}
+  say("Escribe la contraseña y luego elige el archivo.",true);
+  importTarget="login"; $("file").click();
+});
+$("imp2Btn").addEventListener("click",()=>{importTarget="app";$("file").click();});
+$("file").addEventListener("change",ev=>{
+  const f=ev.target.files[0]; ev.target.value=""; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let d; try{d=JSON.parse(rd.result);}catch(e){d=null;}
+    const keys=d?Object.keys(d).filter(isLive):[];
+    if(!keys.length){alert("Ese archivo no es un progreso válido del simulador (progreso_….json).");return;}
+    const o={};keys.forEach(k=>o[k]=d[k]);
+    if(importTarget==="app"){
+      const id=LS.getItem(K.active); clearLive(); writeLive(o); jset(K.vault(id),snapshot());
+      $("sheet").classList.add("hide"); $("frame").src=SIM+"?u="+encodeURIComponent(id)+"&t="+Date.now();
+    }else{
+      const id=picked||slug($("u").value); jset(K.vault(id),o); showStats(id);
+      if(LS.getItem(K.active)===id){clearLive();writeLive(o);}
+      say("Progreso importado en "+users()[id].name+". Ahora entra con tu contraseña.",true);
+    }
+  };
+  rd.readAsText(f);
+});
+
+/* ---------- ambiente: reloj, fase, ticker, tips ---------- */
+function phase(){const h=new Date().getHours();
+  if(h<6)return["Sesión nocturna","Madrugada de estudio: pocas preguntas, bien hechas."];
+  if(h<9)return["Pre-apertura","Calienta con 10 tarjetas antes de abrir."];
+  if(h<13)return["Mercado abierto","Buen momento para un diagnóstico o un módulo."];
+  if(h<16)return["Rueda de la tarde","Ataca tus errores pendientes."];
+  if(h<19)return["Cierre de mercado","Un simulacro corto y a revisar."];
+  return["Post-mercado","Tarjetas de repaso y a descansar."];}
+function tickClock(){const d=new Date();$("clock").textContent=d.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});const [p,g]=phase();$("phase").textContent=p;$("greet").textContent=g;}
+tickClock(); setInterval(tickClock,30000);
+const TK=[["TES","TIR ↑ → precio ↓",0],["IBR O/N","costo interbancario",1],["TRM","promedio de los IMC",1],["DV01","Dmod×V×0,0001",1],["DURACIÓN","Dmac/(1+TIR)",0],["CAPM","Rf+β(Rm−Rf)",1],["VaR 99 %","z=2,33",0],["UVR","↑ inflación",1],["CDT≠CDAT","negociable",1],["REPO","financiación",0],["SHARPE","(Rp−Rf)/σ",1],["AMV","normativa·supervisión·disciplina·certificación",1],["META","80 % por componente",1],["1 pb","0,0001",0]];
+(function(){const s=TK.map(([a,b,u])=>`<span>${a} <b class="${u?"up":"dn"}">${u?"▲":"▼"} ${b}</b></span>`).join("");$("tk").innerHTML=s+s;})();
+const TIPS=["1 punto básico = 0,01 % = 0,0001.","Cupón > TIR → el bono se negocia con prima (precio > 100).","La duración de un cero cupón es igual a su plazo.","CDT es negociable; CDAT no.","Papel comercial: más de 15 días y menos de un año. Bono ordinario: mínimo un año.","VaR paramétrico: valor × σ × z (1,645 al 95 %; 2,33 al 99 %).","Primera instancia disciplinaria de AMV: Sala de Decisión. Segunda: Sala de Revisión.","La certificación AMV de Operador dura tres años.","Simultánea vs. repo: en la simultánea no hay restricciones a la movilidad.","Put del Banco de la República: los IMC le venden dólares → acumula reservas.","Regla del 72: al 8 % el capital se duplica en ≈ 9 años.","Interés acumulado = cupón × días transcurridos / días del periodo.","Gordon: usa D₁ = D₀ × (1 + g), no el dividendo ya pagado.","Revelar un conflicto de interés no siempre basta: a veces toca abstenerse."];
+$("tip").innerHTML="<b>Dato de la rueda:</b> "+TIPS[Math.floor(Math.random()*TIPS.length)];
+
+/* ---------- fondo: velas animadas ---------- */
+const cv=$("bg"),cx=cv.getContext("2d");let W,H,candles=[],raf=null,last=0;
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+function size(){const r=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*r;cv.height=H*r;cx.setTransform(r,0,0,r,0,0);seed();}
+function seed(){candles=[];let p=H*0.55;const n=Math.ceil(W/22)+2;for(let i=0;i<n;i++){candles.push(mk(p));p=candles[i].c;}}
+function mk(o){const c=Math.max(H*.2,Math.min(H*.85,o+(Math.random()-.5)*H*.06));return{o,c,h:Math.min(o,c)-Math.random()*H*.025,l:Math.max(o,c)+Math.random()*H*.025};}
+let off=0;
+function draw(t){
+  raf=requestAnimationFrame(draw); if(t-last<33)return; const dt=Math.min(t-last,100); last=t;
+  off+=dt*0.012; if(off>=22){off-=22;candles.shift();candles.push(mk(candles[candles.length-1].c));}
+  const g=cx.createLinearGradient(0,0,W,H);g.addColorStop(0,"#0b2742");g.addColorStop(1,"#03070d");cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  cx.strokeStyle="#10304a";cx.lineWidth=1;for(let y=60;y<H;y+=70){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+  candles.forEach((k,i)=>{const x=i*22-off,up=k.c<k.o;cx.globalAlpha=.55;cx.strokeStyle=cx.fillStyle=up?"#25b879":"#c4485f";
+    cx.beginPath();cx.moveTo(x+6,k.h);cx.lineTo(x+6,k.l);cx.stroke();cx.fillRect(x,Math.min(k.o,k.c),12,Math.max(2,Math.abs(k.c-k.o)));});
+  cx.globalAlpha=.9;cx.strokeStyle="#24c7cf";cx.lineWidth=2;cx.beginPath();
+  candles.forEach((k,i)=>{const x=i*22-off+6;i?cx.lineTo(x,k.c):cx.moveTo(x,k.c);});cx.stroke();cx.globalAlpha=1;
+}
+function startBg(){if(raf||reduce){if(reduce){size();draw(1000);cancelAnimationFrame(raf);raf=null;}return;}raf=requestAnimationFrame(draw);}
+function stopBg(){if(raf)cancelAnimationFrame(raf);raf=null;}
+addEventListener("resize",size); size();
+document.addEventListener("visibilitychange",()=>{if(document.hidden)stopBg();else if(!$("login").classList.contains("hide"))startBg();});
+
+/* ---------- arranque ---------- */
+if(location.protocol==="file:") $("envWarn").textContent="⚠ Lo abriste como archivo local: el progreso no se guardará bien. Ábrelo desde tu página web publicada.";
+const act=LS.getItem(K.active);
+if(act&&users()[act]){
+  syncOut();
+  if(LS.getItem(K.keep)==="1"){enter(act,true);}
+  else{clearLive();LS.removeItem(K.active);}
+}
+applyMode(); renderChips(); if(!$("app").classList.contains("hide"))stopBg(); else startBg();
+})();
+</script>
+</body>
+</html>
