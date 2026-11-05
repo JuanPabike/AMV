@@ -1,5 +1,5 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Simulador AMV Operador 2026 · v5.0</title>
+<title>Simulador AMV Operador 2026 · v5.1</title>
 <style>
 :root{--bg:#071321;--card:#10223a;--line:#29445e;--ink:#eef7ff;--muted:#abc0d3;--cyan:#24c7cf;--green:#25b879;--red:#c4485f;--yel:#d9a62e}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top left,#17445f,#071321 40%);color:var(--ink);font-family:system-ui,Segoe UI,sans-serif}
@@ -31,6 +31,7 @@ a{color:#8beaf0}.btnlike{display:inline-block;padding:11px;border-radius:11px;bo
 .dlg{background:#10223a;border:1px solid var(--cyan);border-radius:16px;padding:20px;max-width:520px;width:100%}.dlg p{color:var(--ink);font-size:17px}
 .dlg .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.dlg button{min-width:130px}
 @media(max-width:650px){button,select{width:100%}}
+#cards select{min-height:50px;font-size:17px;padding:12px 14px}#cards button{min-height:48px;font-size:16px}
 </style></head><body><div class="w">
 <header class="c"><h1>Simulador AMV Operador 2026 · v5.0</h1>
 <p>Examen general, las cuatro especialidades, Maestro de Negociación y jornada completa. Preguntas de concepto y de caso con distractores reales, opciones en orden aleatorio, ejercicios de cálculo con números nuevos en cada intento y prioridad a las preguntas que aún no has visto. El banco de Operador general y de Renta Fija está hecho desde las guías oficiales de AMV, con la página de la guía en cada respuesta. Material personal, no oficial.</p>
@@ -67,10 +68,11 @@ a{color:#8beaf0}.btnlike{display:inline-block;padding:11px;border-radius:11px;bo
 <section id="cards" class="c hide"><h2>🃏 Tarjetas</h2>
 <div id="cSetup"><p>Definiciones, normas, plazos y límites, fórmulas, trampas y ejercicios del taller, tomados de las guías. Cada tarjeta indica la guía y la página donde está el tema.</p>
 <div class="grid">
-<div><label>Especialidad</label><select id="cSpec"></select></div>
+<div><label>Especialidad</label><select id="cSpec" onchange="cardsFillMods()"></select></div>
+<div><label>Módulo</label><select id="cMod"></select></div>
 <div><label>Tipo</label><select id="cType"><option value="">Todos</option><option>Concepto</option><option>Fórmula</option><option>Dato clave</option><option>Tabla</option><option>Trampa</option><option>Ejercicio</option></select></div>
 <div><label>Origen</label><select id="cOrig"><option value="all">Todas (primero las que más te cuestan)</option><option value="err">Solo temas de mis errores pendientes</option><option value="flag">Solo las que marqué «Repasar»</option></select></div>
-<div><label>Cantidad</label><select id="cN"><option>10</option><option selected>20</option><option>40</option><option value="9999">Todas</option></select></div>
+<div><label>Cantidad</label><select id="cN"><option>10</option><option>15</option><option selected>20</option><option>40</option><option value="9999">Todas</option></select></div>
 </div><p id="cInfo"></p><p><button class="primary" onclick="cardsStart()">Empezar tarjetas</button> <button onclick="home()">Volver al inicio</button></p></div>
 <div id="cRun" class="hide"><p id="cProg" class="pill"></p><div class="fcard" id="fc"></div>
 <div class="fcbtns" style="margin-top:12px" id="fcBtns"></div>
@@ -1583,11 +1585,18 @@ function openCards(preMods){ clearInterval(timerId); S=null;
   for(const k of sp) sel.append(h("option",{value:k},SPECN[k]));
   for(const k of Object.keys(SPECN)) if(!sp.includes(k)) sel.append(h("option",{value:k},SPECN[k]+" (otra pestaña)"));
   CS={preMods:preMods||null}; if(preMods){ el("cOrig").value="all"; }
+  cardsFillMods();
   const st=load("cards",{}); const flagged=Object.values(st).filter(x=>x.r).length;
   el("cInfo").textContent=`${CARDS.length} tarjetas en total · ${Object.keys(st).length} ya vistas · ${flagged} marcadas para repasar.`+(preMods?` Filtro activo: temas de los errores del último intento (${preMods.length} módulos).`:"");
   updateSaveBar(); window.scrollTo(0,0); }
+function cardsFillMods(){ const specs=el("cSpec").value.split(","), m=el("cMod"), prev=m.value; m.innerHTML="";
+  const cnt={}; let tot=0; for(const c of CARDS){ if(!specs.includes(c.s)) continue; const k=c.m||"__otros"; cnt[k]=(cnt[k]||0)+1; tot++; }
+  m.append(h("option",{value:""},`Todos los módulos (${tot})`));
+  Object.keys(cnt).filter(k=>k!=="__otros").sort((a,b)=>a.localeCompare(b,"es")).forEach(k=>m.append(h("option",{value:k},`${k} (${cnt[k]})`)));
+  if(cnt.__otros) m.append(h("option",{value:"__otros"},`Otros temas (${cnt.__otros})`));
+  if([...m.options].some(o=>o.value===prev)) m.value=prev; }
 function cardsStart(){ const specs=el("cSpec").value.split(","), type=el("cType").value, orig=el("cOrig").value, n=+el("cN").value; const st=load("cards",{});
-  let pool=CARDS.filter(c=>specs.includes(c.s)&&(!type||c.t===type));
+  const mod=el("cMod").value; let pool=CARDS.filter(c=>specs.includes(c.s)&&(!type||c.t===type)&&(!mod||(mod==="__otros"?!c.m:c.m===mod)));
   if(CS&&CS.preMods){ const ms=new Set(CS.preMods); pool=pool.filter(c=>ms.has(c.m)); }
   if(orig==="err"){ const ms=new Set(Object.values(load("errors",{}))); pool=pool.filter(c=>ms.has(c.m)); }
   if(orig==="flag") pool=pool.filter(c=>st[c.id]&&st[c.id].r);
